@@ -596,6 +596,10 @@
       } else {
         noteEl.textContent = '틴트와 흐림이 함께 조절됩니다.';
       }
+
+      /* 문구 길이가 바뀌면 패널 크기도 바뀐다. 위치를 다시 잡지 않으면
+         화면 오른쪽 끝에서 열었을 때 뷰포트를 넘어간다 */
+      if (global.LG.repositionPopovers) global.LG.repositionPopovers();
     }
 
     var initialLevel = LGS.glassLevel();

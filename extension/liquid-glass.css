@@ -102,6 +102,10 @@
   --scene-base:     #E8EDF6;
   --scene-accent-a: #4B8DF0;
   --scene-accent-b: #F0779F;
+  /* 그라디언트 끝점을 "같은 색 알파 0"으로 쓰기 위한 삼원색 사본.
+     맨 transparent로 끝내면 sRGB 보간이 회색을 거쳐 탁해진다 */
+  --scene-accent-a-rgb: 75,141,240;
+  --scene-accent-b-rgb: 240,119,159;
   --accent: #0A63E8;
 
   /* vibrancy 라벨 (§5.4). 라이트 씬에서는 흰 라벨이 성립하지 않으므로
@@ -111,12 +115,15 @@
   --vib-label-3: rgba(16,20,28,.44);
   --vib-label-4: rgba(16,20,28,.26);   /* regular/thick에서만 */
 
-  /* 라이트에서 흰 틴트는 유리를 배경에 녹여 버린다.
-     애플의 Regular는 "틴트로 가린다"가 아니라 "광도를 조정한다"이므로
-     밝은 배경 위에서는 어두운 쪽으로 간다 (§2.1 A) */
-  --lg-tint-rgb: 12,16,24;
-  --lg-tint-a1: calc(.10 * var(--glass-level));
-  --lg-tint-a2: calc(.04 * var(--glass-level));
+  /* 라이트에서 흰 틴트는 유리를 배경에 녹여 버린다. 그렇다고 중성 검정을 덮으면
+     명도만 내려가고 채도가 깎여 탁해진다 — "광도 조정"은 스크림이 아니다 (§2.1 A).
+     어둡게 하는 일은 backdrop-filter의 brightness()가 맡고, 여기 남는 틴트는
+     회색이 아니라 씬의 파랑을 머금는 차가운 색으로 얇게만 깐다 */
+  --lg-bright: .94;
+  --lg-sat: 200%;                     /* 어두워진 만큼 채도를 되살린다 */
+  --lg-tint-rgb: 22,34,58;
+  --lg-tint-a1: calc(.05 * var(--glass-level));
+  --lg-tint-a2: calc(.02 * var(--glass-level));
 
   /* 흰 림은 밝은 배경에서 사라진다. 하단을 어둡게 잡아 경계를 만든다.
      상단이 하단보다 밝다는 순서는 그대로다 (§5.3) */
@@ -149,6 +156,8 @@
     --scene-base:     #0B0D12;
     --scene-accent-a: #2B4C8C;
     --scene-accent-b: #6B2D52;
+    --scene-accent-a-rgb: 43,76,140;
+    --scene-accent-b-rgb: 107,45,82;
     --accent: #5A9BFF;
 
     --vib-label:   rgba(255,255,255,.95);
@@ -156,6 +165,8 @@
     --vib-label-3: rgba(255,255,255,.44);
     --vib-label-4: rgba(255,255,255,.26);
 
+    --lg-bright: 1.06;                /* 부록 A 원본 — 어두운 배경 위에서는 밝게 */
+    --lg-sat: 180%;
     --lg-tint-rgb: 255,255,255;
     --lg-tint-a1: calc(.16 * var(--glass-level));
     --lg-tint-a2: calc(.08 * var(--glass-level));
@@ -184,6 +195,8 @@
   --scene-base:     #0B0D12;
   --scene-accent-a: #2B4C8C;
   --scene-accent-b: #6B2D52;
+  --scene-accent-a-rgb: 43,76,140;
+  --scene-accent-b-rgb: 107,45,82;
   --accent: #5A9BFF;
 
   --vib-label:   rgba(255,255,255,.95);
@@ -191,6 +204,8 @@
   --vib-label-3: rgba(255,255,255,.44);
   --vib-label-4: rgba(255,255,255,.26);
 
+  --lg-bright: 1.06;                /* 부록 A 원본 — 어두운 배경 위에서는 밝게 */
+  --lg-sat: 180%;
   --lg-tint-rgb: 255,255,255;
   --lg-tint-a1: calc(.16 * var(--glass-level));
   --lg-tint-a2: calc(.08 * var(--glass-level));
@@ -242,8 +257,10 @@
 .t-body    { font-size: 17px; font-weight: 450; line-height: 1.5; }
 .t-label   { font-size: 13px; font-weight: 550; line-height: 1.35; }
 
-/* 유리 위 텍스트에 400 무게를 쓰지 않는다. 최소 450. (§6) */
-.lg :is(p, span, div, button, a, li) { font-weight: 450; }
+/* 유리 위 텍스트에 400 무게를 쓰지 않는다. 최소 450. (§6)
+   이건 하한선이지 지정값이 아니므로 :where()로 특이도를 0으로 둔다.
+   :is()로 두면 (0,1,1)이 되어 .chip의 550 같은 컴포넌트 값을 덮어쓴다 */
+.lg :where(p, span, div, button, a, li) { font-weight: 450; }
 
 /* 섹션 헤더에 uppercase를 걸지 않는다 (§6.1 A) */
 .section-header { text-transform: none; font-size: 13px; font-weight: 550; color: var(--vib-label-2); }
@@ -265,8 +282,10 @@
   --lg-blur-base: 16px;
   --lg-blur: clamp(3px, calc(var(--lg-blur-base) * var(--glass-level)), 44px);
   --lg-tint: var(--lg-tint-regular);
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
+  /* 광도 조정은 brightness()가, 채도 유지는 saturate()가 한다 (§2.1 A).
+     중성 틴트로 덮어 어둡게 만들면 명도만 내려가고 색이 탁해진다 */
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
   box-shadow:
     var(--lg-shadow-contact),
     var(--lg-shadow-ambient),
@@ -279,8 +298,8 @@
    맵이 준비되기 전에는 빈 값으로 떨어져 티어 B와 동일하게 동작한다. */
 .lg-refract .lg {
   --lg-blur-base: 12px;   /* 굴절이 있으면 블러를 덜 쓴다 (§11.2 티어 A) */
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)) var(--lg-refract-fn);
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)) var(--lg-refract-fn);
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright)) var(--lg-refract-fn);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)) brightness(var(--lg-bright)) var(--lg-refract-fn);
 }
 
 /* 굴절이 되는 브라우저와 squircle이 되는 브라우저가 정확히 일치한다 (§7.3) */
@@ -309,13 +328,21 @@
 /* 두께 프리셋 (§7.4). 얇은 유리일수록 블러가 적고 굴절이 강하다.
    굴절 강도는 테마별 값을 가리키게 두어(라이트에서 더 강하다) 프리셋이
    테마 조정을 덮어쓰지 않게 한다 */
-.lg--thin    { --lg-blur-base: 8px;  --lg-scale: var(--lg-scale-thin);  --lg-radius: var(--lg-radius-sm); }
-.lg--regular { --lg-blur-base: 12px; }   /* regular는 루트의 --lg-scale이 곧 기준값이다 */
-.lg--thick   { --lg-blur-base: 24px; --lg-scale: var(--lg-scale-thick); }
+/* 선택자를 .lg.lg--*로 쓴다 — 티어 A의 `.lg-refract .lg`와 특이도를 맞춰야
+   프리셋이 눌리지 않는다. 한 단계 낮게 쓰면 모든 프리셋이 12px로 뭉개진다 */
+.lg.lg--thin    { --lg-blur-base: 8px;  --lg-scale: var(--lg-scale-thin);  --lg-radius: var(--lg-radius-sm); }
+.lg.lg--regular { --lg-blur-base: 12px; }   /* regular는 루트의 --lg-scale이 곧 기준값이다 */
+.lg.lg--thick   { --lg-blur-base: 24px; --lg-scale: var(--lg-scale-thick); }
 
 /* 유리 위 요소에 또 배경을 얹지 않는다 (§1.4 A).
-   이 규칙을 코드로 못 박아 실수로 배경이 겹치는 것을 막는다. */
-.lg__content :is(button, a, [role="button"], [role="option"]) {
+   이 규칙을 코드로 못 박아 실수로 배경이 겹치는 것을 막는다.
+
+   :is()가 아니라 :where()를 쓴다. :is()는 인자 중 가장 특이도가 높은 것
+   (`[role="button"]`)을 물려받아 (0,2,0)이 되고, 그러면 이 "기본값"이
+   .chip 같은 컴포넌트 규칙을 이겨 버린다 — 실제로 선택 칩의 액센트 테두리가
+   지워져 PRD §3.2의 3중 표현이 2중으로 줄어 있었다.
+   :where()는 특이도 0이라 의도대로 "기본값"으로만 작동한다 */
+.lg__content :where(button, a, [role="button"], [role="option"]) {
   background: none;
   border: 0;
   color: inherit;

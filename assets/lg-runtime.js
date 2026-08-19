@@ -222,8 +222,21 @@
 
     panel.style.left = Math.round(left) + 'px';
     panel.style.top = Math.round(top) + 'px';
-    panel.style.minWidth = Math.round(Math.min(t.width, global.innerWidth - margin * 2)) + 'px';
+    /* 트리거 폭에 맞추는 건 측정소 드롭다운처럼 넓은 트리거일 때만 뜻이 있다.
+       40px짜리 아이콘 버튼에 minWidth를 걸면 사실상 내용이 폭을 정하게 되어,
+       안내 문구가 길어질 때 패널이 오른쪽으로 자란다 */
+    if (t.width >= 120) {
+      panel.style.minWidth = Math.round(Math.min(t.width, global.innerWidth - margin * 2)) + 'px';
+    } else {
+      panel.style.removeProperty('min-width');
+    }
     panel.style.visibility = '';
+  }
+
+  /* 열려 있는 팝오버의 내용이 바뀌었을 때 위치를 다시 잡는다.
+     크기가 달라졌는데 left/top이 그대로면 화면 밖으로 삐져나간다 */
+  function repositionPopovers() {
+    openPopovers.forEach(function (e) { place(e.panel, e.trigger); });
   }
 
   function closePopover(entry) {
@@ -283,12 +296,8 @@
     }
   });
 
-  global.addEventListener('resize', function () {
-    openPopovers.forEach(function (e) { place(e.panel, e.trigger); });
-  });
-  global.addEventListener('scroll', function () {
-    openPopovers.forEach(function (e) { place(e.panel, e.trigger); });
-  }, true);
+  global.addEventListener('resize', repositionPopovers);
+  global.addEventListener('scroll', repositionPopovers, true);
 
   /* ------------------------------------------------------------------------
      5. 설정 — §12.2
@@ -350,6 +359,7 @@
     togglePopover: togglePopover,
     closePopover: closeAll,
     isPopoverOpen: isOpen,
+    repositionPopovers: repositionPopovers,
     settings: settings
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

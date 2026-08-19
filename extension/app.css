@@ -10,9 +10,14 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 
-/* 명시적 background-color가 없으면 흰색으로 떨어진다 (§11.3) */
-html, body {
+/* 명시적 background-color가 없으면 흰색으로 떨어진다 (§11.3).
+   단, body에는 주지 않는다 — body 배경은 z-index:-1인 .scene보다 나중에 그려져
+   씬 블롭을 통째로 덮는다. 그러면 유리 뒤에 대비가 없어 굴절이 보이지 않는다(§5.1).
+   html 하나면 캔버스 배경으로 충분하고 Safari 흰 바도 막힌다 */
+html {
   background-color: var(--scene-base);
+}
+html, body {
   color: var(--vib-label);
   font-family: var(--font-stack);
   -webkit-font-smoothing: antialiased;
@@ -21,7 +26,19 @@ html, body {
 
 body { min-height: 100dvh; }
 
-button { font: inherit; color: inherit; cursor: pointer; }
+/* Tailwind preflight를 껐으므로(계획 C4) 버튼 기본 스타일을 여기서 직접 지운다.
+   .lg__content 안쪽만 지우던 리셋으로는 .mat 안의 맨 버튼이 새어 나와
+   회색 배경 + outset 테두리로 렌더된다.
+   자기 배경·테두리를 가진 컨트롤(.btn-retry, .switch, .station__trigger)은
+   클래스 선택자라 특이도로 이 규칙을 이긴다 */
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
 ul, ol { margin: 0; padding: 0; list-style: none; }
 
 .visually-hidden {
@@ -44,25 +61,32 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   opacity: .85;
 }
 /* 블롭을 전부 똑같이 뭉개면 유리 밑이 평평해져 휘어도 티가 안 난다.
-   저주파(큰 색면) + 고주파(선명한 가장자리)를 섞어야 굴절이 읽힌다 (§5.1) */
+   저주파(큰 색면) + 고주파(선명한 가장자리)를 섞어야 굴절이 읽힌다 (§5.1)
+
+   끝점은 맨 `transparent` 대신 "같은 색, 알파만 0"으로 명시한다.
+   요즘 브라우저는 그라디언트를 미리 곱해진 알파로 보간해서 맨 transparent로도
+   회색을 거치지는 않지만, 색을 못박아 두면 엔진에 기대지 않아도 된다 */
 .scene__blob--a {
   width: 78vmax; height: 78vmax;
   top: -32vmax; left: -22vmax;
   filter: blur(70px);
-  background: radial-gradient(circle at 40% 40%, var(--scene-accent-a), transparent 68%);
+  background: radial-gradient(circle at 40% 40%,
+    rgba(var(--scene-accent-a-rgb), 1), rgba(var(--scene-accent-a-rgb), 0) 68%);
 }
 .scene__blob--b {
   width: 66vmax; height: 66vmax;
   right: -26vmax; top: 18vmax;
   filter: blur(70px);
-  background: radial-gradient(circle at 60% 40%, var(--scene-accent-b), transparent 68%);
+  background: radial-gradient(circle at 60% 40%,
+    rgba(var(--scene-accent-b-rgb), 1), rgba(var(--scene-accent-b-rgb), 0) 68%);
 }
 /* 이 블롭만 블러를 낮춰 가장자리를 남긴다 — 굴절이 꺾을 대상이다 */
 .scene__blob--c {
   width: 46vmax; height: 46vmax;
   left: 6vmax; bottom: -22vmax;
   filter: blur(44px);
-  background: radial-gradient(circle at 50% 50%, var(--scene-accent-a), transparent 62%);
+  background: radial-gradient(circle at 50% 50%,
+    rgba(var(--scene-accent-a-rgb), 1), rgba(var(--scene-accent-a-rgb), 0) 62%);
   opacity: .62;
 }
 
@@ -282,17 +306,61 @@ body[data-popover-open="1"] .chipbar {
 .station__name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .station__val { font-size: 13px; font-weight: 550; color: var(--vib-label-3); }
 
-/* 팝오버 — 트리거에서 나온다. 모달 스크림을 깔지 않는다 (§9.5 A) */
+/* 팝오버 — 트리거에서 나온다. 모달 스크림을 깔지 않는다 (§9.5 A)
+
+   표면과 스크롤러를 반드시 분리한다.
+   .lg::before(틴트)·::after(스페큘러)는 inset:0 절대 배치라, 이 요소가 곧
+   스크롤 컨테이너이면 한 화면 높이만 덮은 채 내용과 함께 밀려 올라간다.
+   그러면 처음 보이던 영역을 지나는 순간 틴트가 끝나는 자리에 경계선이 드러난다.
+   .lg는 overflow: hidden을 유지하고(부록 B 계약) 스크롤은 .lg__content가 맡는다 */
 .popover {
   position: fixed;
   z-index: 60;
   min-width: 220px;
-  max-height: min(340px, 60dvh);
-  overflow: auto;
-  overscroll-behavior: contain;
+  max-width: min(360px, calc(100vw - 16px));
   padding: 6px;
   --r: var(--lg-radius-sm);
 }
+.popover > .lg__content {
+  max-height: min(328px, 60dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  /* 기본 스크롤바는 유리 위에서 이물질처럼 보인다 */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--vib-label) 28%, transparent) transparent;
+}
+.popover > .lg__content::-webkit-scrollbar { inline-size: 6px; }
+.popover > .lg__content::-webkit-scrollbar-track { background: transparent; }
+.popover > .lg__content::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--vib-label) 28%, transparent);
+}
+
+/* 목록 팝오버 하단 페이드 — 스크롤 엣지 효과와 같은 취지다 (§9.1).
+   바 전체에 mask-image를 걸지 않는다는 금지(§13)는 건드리지 않는다.
+   스크롤이 없는 설정 팝오버에는 걸지 않는다 */
+.popover--list > .lg__content::after {
+  content: "";
+  display: block;
+  position: sticky;
+  bottom: 0;
+  block-size: 20px;
+  margin-top: -20px;      /* 스크롤 높이를 늘리지 않고 마지막 항목 위에 얹힌다 */
+  background: linear-gradient(180deg,
+    rgba(var(--lg-tint-rgb), 0),
+    rgba(var(--lg-tint-rgb), calc(.22 * var(--glass-level))));
+  pointer-events: none;
+}
+
+/* 설정 팝오버는 폭을 고정한다.
+   place()가 트리거(40px 아이콘) 폭만 minWidth로 잡으므로, 폭을 안 묶으면
+   안내 문구 길이가 곧 창 너비가 되어 토글할 때마다 오른쪽으로 자란다 */
+.popover--settings {
+  inline-size: min(320px, calc(100vw - 24px));
+  max-width: none;
+}
+.popover--settings > .lg__content { max-height: min(440px, 80dvh); }
+
 .popover[hidden] { display: none; }
 .popover__item {
   display: flex; align-items: center; gap: 10px;
@@ -358,11 +426,13 @@ body[data-popover-open="1"] .chipbar {
   font-size: 11px; font-weight: 500; color: var(--vib-label-3);
   margin-top: 2px;
 }
-/* 대비는 틴트가 책임진다(§12.1). 얇게 내리면 실제로 대비가 떨어지므로 말해 준다 */
+/* 대비는 틴트가 책임진다(§12.1). 얇게 내리면 실제로 대비가 떨어지므로 말해 준다.
+   문구가 길어질 때 창이 세로로도 튀지 않도록 두 줄 높이를 미리 잡아 둔다 */
 .settings__note {
   font-size: 11px; font-weight: 500; line-height: 1.5;
   color: var(--vib-label-3);
   padding: 4px 10px 0;
+  min-block-size: 3.3em;
 }
 .settings__note--warn { color: var(--grade-3); }
 .settings__group[data-locked="1"] .settings__slider-head,
