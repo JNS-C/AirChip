@@ -174,11 +174,13 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .chip:hover { color: var(--vib-label); }
 .chip:active { transform: scale(.97); }
-/* 3중 표현 — 인디케이터 틴트(배경) + 액센트 테두리 + 굵기. 색 단독 금지 */
+/* 3중 표현 — 인디케이터 틴트(배경) + 액센트 테두리 + 굵기. 색 단독 금지.
+   테두리는 칩이 아니라 인디케이터가 갖는다. 칩에 붙이면 목적지에서 즉시 켜지는데
+   알약은 350ms에 걸쳐 이동해서, 테두리와 유리가 따로 노는 것처럼 보인다.
+   같은 요소에 두면 둘이 항상 함께 움직인다. */
 .chip[aria-pressed="true"] {
   color: var(--vib-label);
   font-weight: 700;
-  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
 }
 /* 선택 표시 — 유리 재질을 입히되 배경을 읽지 않는 층으로 만든다.
    DESIGN §10.2(b)가 인디케이터에 처방한 형태가 정확히 "틴트 + 스페큘러"다.
@@ -189,6 +191,9 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   position: absolute; top: 0; left: 0;
   width: 0; height: 0;
   border-radius: calc(var(--lg-radius-sm) - 6px);   /* 동심 규칙 §7.2 */
+  /* 액센트 테두리가 유리와 같은 요소에 있어야 함께 움직인다.
+     칩과 같은 1px 폭이라 border-box 기준으로 정확히 포개진다 */
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
   background:
     /* 3층 스페큘러 — 광원은 항상 위 (--lg-light-angle) */
     linear-gradient(var(--lg-light-angle),
