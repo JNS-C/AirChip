@@ -180,13 +180,29 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   font-weight: 700;
   border-color: color-mix(in srgb, var(--accent) 70%, transparent);
 }
-/* 인디케이터는 배경을 읽지 않는 순수 형태 레이어다. backdrop-filter 금지 (§10.2 b) */
+/* 선택 표시 — 유리 재질을 입히되 배경을 읽지 않는 층으로 만든다.
+   DESIGN §10.2(b)가 인디케이터에 처방한 형태가 정확히 "틴트 + 스페큘러"다.
+   여기에 backdrop-filter를 걸면 이미 유리인 칩 바 위에 유리를 포개는 셈이라
+   블러가 이중으로 걸려 탁해진다(§8.4). 그래서 4요소 중 프로스트·굴절만 빼고
+   스페큘러·림·두께감을 전부 넣는다 — 체감 기여도가 가장 큰 층이 스페큘러다(§4). */
 .chip-indicator {
   position: absolute; top: 0; left: 0;
   width: 0; height: 0;
-  border-radius: calc(var(--lg-radius-sm) - 6px);
-  background: var(--lg-tint-prominent);
-  box-shadow: inset 0 1px .5px var(--lg-rim-top);
+  border-radius: calc(var(--lg-radius-sm) - 6px);   /* 동심 규칙 §7.2 */
+  background:
+    /* 3층 스페큘러 — 광원은 항상 위 (--lg-light-angle) */
+    linear-gradient(var(--lg-light-angle),
+      rgba(255,255,255,.32) 0%,
+      rgba(255,255,255,.08) 26%,
+      rgba(255,255,255,0) 54%),
+    /* 1층 틴트 — prominent. 투명도 슬라이더를 타지 않는다.
+       선택 표시가 흐려지면 PRD §3.2의 3중 표현이 무너진다 */
+    var(--lg-tint-prominent);
+  box-shadow:
+    var(--lg-shadow-contact),                  /* 바에서 살짝 떠 보인다 */
+    inset 0 1px .5px var(--lg-rim-top),        /* 상단이 하단보다 밝다 (§5.3) */
+    inset 0 -1px .5px var(--lg-rim-bottom),
+    inset 0 -7px 10px -9px rgba(0,0,0,.30);    /* 아래쪽 두께감 — 렌즈 곡률 흉내 */
   pointer-events: none;
   z-index: 0;
   opacity: 0;
@@ -196,6 +212,27 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
               opacity var(--lg-dur) var(--lg-ease);
 }
 .chip-indicator[data-ready="1"] { opacity: 1; }
+
+/* 굴절이 되는 브라우저와 squircle이 되는 브라우저는 정확히 일치한다 (§7.3) */
+@supports (corner-shape: squircle) {
+  .lg-refract .chip-indicator { corner-shape: squircle; }
+}
+
+/* 투명 효과를 줄이면 유리 표현을 걷고 불투명 액센트로 떨어진다 (§12.2).
+   선택 표시 자체는 남아야 하므로 지우지 않고 단색으로 바꾼다 */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .chip-indicator {
+    background: color-mix(in srgb, var(--accent) 26%, var(--lg-solid));
+    box-shadow: var(--lg-shadow-contact);
+  }
+}
+:root[data-transparency="off"] .chip-indicator {
+  background: color-mix(in srgb, var(--accent) 26%, var(--lg-solid));
+  box-shadow: var(--lg-shadow-contact);
+}
+
+@media (prefers-reduced-motion: reduce) { .chip-indicator { transition: none; } }
+:root[data-motion="off"] .chip-indicator { transition: none; }
 
 /* 팝오버가 열리면 칩 바를 콘텐츠 레이어로 강등한다 — 굴절 표면 2개 상한 유지 (§8.4) */
 body[data-popover-open="1"] .chipbar {
