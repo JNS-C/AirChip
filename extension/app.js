@@ -68,6 +68,9 @@
     adviceToken: 0
   };
 
+  /* 측정소 목록을 끌어서 스크롤했는지. 드래그 직후의 click을 무시하는 데 쓴다 */
+  var listDragged = false;
+
   function $(id) { return document.getElementById(id); }
   function announce(text) { var n = $('live-region'); if (n) n.textContent = text; }
 
@@ -191,6 +194,9 @@
                     '<span class="popover__item-name">' + escapeHtml(s.name) + '</span>' +
                     '<span class="popover__item-val">' + escapeHtml(val) + '</span>';
       b.addEventListener('click', function () {
+        /* 목록을 끌어 스크롤한 직후의 click은 선택으로 치지 않는다.
+           모바일에서 스크롤하려다 엉뚱한 측정소가 선택되는 것을 막는다 */
+        if (listDragged) return;
         global.LG.closePopover();
         $('station-trigger').focus();
         selectStation(s.name);
@@ -211,6 +217,20 @@
     trigger.addEventListener('click', function () {
       global.LG.togglePopover(trigger, panel);
     });
+
+    /* 드래그 판정 — 터치로 목록을 끌면 브라우저가 click을 억제하는 것이 보통이지만,
+       엔진에 따라 그렇지 않은 경우가 있다. 이동 거리로 직접 걸러낸다 */
+    var startY = null;
+    panel.addEventListener('pointerdown', function (e) {
+      startY = e.clientY;
+      listDragged = false;
+    }, true);
+    panel.addEventListener('pointermove', function (e) {
+      if (startY !== null && Math.abs(e.clientY - startY) > 8) listDragged = true;
+    }, true);
+    panel.addEventListener('pointercancel', function () {
+      listDragged = true;   // 스크롤로 넘어간 제스처다
+    }, true);
     /* 키보드 탐색 (PRD §3.2 접근성) */
     panel.addEventListener('keydown', function (e) {
       var items = Array.prototype.slice.call(panel.querySelectorAll('.popover__item'));

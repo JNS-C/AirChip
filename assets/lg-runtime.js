@@ -229,8 +229,14 @@
 
   function place(panel, trigger) {
     var t = trigger.getBoundingClientRect();
-    panel.hidden = false;
-    panel.style.visibility = 'hidden';
+    /* visibility 토글은 "처음 열 때 엉뚱한 자리에서 번쩍이는 것"을 막으려는 장치다.
+       이미 열려 있는 패널에까지 걸면 안 된다 — 제스처 도중 요소가 히트테스트에서
+       빠져 모바일 터치 스크롤이 통째로 취소된다 */
+    var measuring = panel.hidden;
+    if (measuring) {
+      panel.hidden = false;
+      panel.style.visibility = 'hidden';
+    }
     var p = panel.getBoundingClientRect();
     var gap = 8;
     var margin = 8;
@@ -255,7 +261,7 @@
     } else {
       panel.style.removeProperty('min-width');
     }
-    panel.style.visibility = '';
+    if (measuring) panel.style.visibility = '';
   }
 
   /* 열려 있는 팝오버의 내용이 바뀌었을 때 위치를 다시 잡는다.
@@ -322,7 +328,19 @@
   });
 
   global.addEventListener('resize', repositionPopovers);
-  global.addEventListener('scroll', repositionPopovers, true);
+
+  /* 페이지가 스크롤되면 트리거가 움직이므로 팝오버를 따라 옮겨야 한다.
+     스크롤 이벤트는 버블링되지 않아 캡처로 받는데, 그 대가로 팝오버 목록
+     "안쪽" 스크롤까지 여기로 들어온다. 안쪽 스크롤은 트리거를 움직이지 않으므로
+     재배치할 이유가 없고, 재배치하면 진행 중인 터치 스크롤만 방해한다 */
+  global.addEventListener('scroll', function (e) {
+    var target = e.target;
+    if (target && target.nodeType === 1 &&
+        openPopovers.some(function (entry) { return entry.panel.contains(target); })) {
+      return;
+    }
+    repositionPopovers();
+  }, { capture: true, passive: true });
 
   /* ------------------------------------------------------------------------
      5. 설정 — §12.2

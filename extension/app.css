@@ -323,8 +323,13 @@ body[data-popover-open="1"] .chipbar {
 }
 .popover > .lg__content {
   max-height: min(328px, 60dvh);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
+  /* 세로 패닝이 이 요소의 기본 제스처임을 브라우저에 명시한다.
+     이게 없으면 모바일에서 드래그가 탭으로 해석되는 경우가 생긴다 */
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   /* 기본 스크롤바는 유리 위에서 이물질처럼 보인다 */
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--vib-label) 28%, transparent) transparent;
