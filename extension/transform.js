@@ -65,13 +65,16 @@
       .sort(function (a, b) { return b.pm25 - a.pm25; })[0] || null;
     var worst = byPm10 || byPm25;
 
-    /* 드롭다운 정렬 — 현재 농도 내림차순. 결측은 뒤로 */
+    /* 드롭다운 정렬 — 가나다순.
+       PRD §3.4는 "현재 농도 내림차순"으로 적었지만, 이 목록의 용도는
+       "우리 동네"를 찾는 것이다. 경기는 측정소가 126개라 농도순으로는
+       아는 이름을 찾을 수 없다. 농도는 각 항목에 숫자로 함께 보이므로
+       정렬을 바꿔도 정보가 사라지지 않는다.
+       "가장 나쁜 곳"으로의 동선은 기본 선택값이 계속 담당한다 (§3.3 연결).
+       결측 측정소도 섞어 둔다 — 찾았는데 "측정 불가"인 편이,
+       목록에서 아예 안 보이는 것보다 낫다. */
     var sorted = stations.slice().sort(function (a, b) {
-      var av = a.pm10 === null ? a.pm25 : a.pm10;
-      var bv = b.pm10 === null ? b.pm25 : b.pm10;
-      if (av === null) return 1;
-      if (bv === null) return -1;
-      return bv - av;
+      return String(a.name).localeCompare(String(b.name), 'ko');
     });
 
     var dataTime = null;

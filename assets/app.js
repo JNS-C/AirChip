@@ -508,10 +508,13 @@
     return Data.air(city).then(function (air) {
       state.air = air;
       renderCard(air);
-      renderStationList(air.stations);
-      /* 기본 선택은 메인 카드의 최악 측정소 (§3.4) */
+      /* 기본 선택은 메인 카드의 최악 측정소 (§3.4).
+         목록을 그리기 "전에" 확정해야 한다 — 순서가 뒤집히면 aria-selected가
+         이전 시도의 측정소명과 비교되어 체크 표시가 하나도 안 붙는다.
+         가나다순 목록에서는 지금 선택이 어디인지 보이는 게 특히 중요하다 */
       var next = air.worst ? air.worst.name : (air.stations[0] && air.stations[0].name);
       state.stationName = next;
+      renderStationList(air.stations);
       updateStationTrigger();
       renderDetails();
       announce(city + ' PM10 ' + (air.pm10.avg === null ? '측정 불가' : air.pm10.avg) +

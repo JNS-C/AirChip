@@ -28,8 +28,8 @@ check('전체/유효 측정소 수를 함께 반환한다 (4개 중 3개)',
   air.total === 4 && air.pm10.valid === 3, `total=${air.total} valid=${air.pm10.valid}`);
 check('최악 측정소는 최댓값을 가진 측정소다 (다, 120)',
   air.worst.name === '다' && air.worst.value === 120, JSON.stringify(air.worst));
-check('드롭다운 정렬은 현재 농도 내림차순, 결측은 뒤로',
-  air.stations.map(s => s.name).join('') === '다가라나', air.stations.map(s => s.name).join(''));
+check('드롭다운은 가나다순으로 정렬된다 (결측 측정소도 섞여 있다)',
+  air.stations.map(s => s.name).join('') === '가나다라', air.stations.map(s => s.name).join(''));
 check('평균 60은 PM10 보통(31~80) 등급 2',
   air.pm10.grade === 2, 'grade=' + air.pm10.grade);
 check('PM2.5 평균 30은 보통(16~35) 등급 2',

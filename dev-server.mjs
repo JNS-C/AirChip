@@ -107,7 +107,10 @@ const server = createServer(async (req, res) => {
     }
 
     try {
-      // 매 요청마다 새로 읽어 코드 수정이 바로 반영되게 한다
+      /* 매 요청마다 새로 읽어 코드 수정이 바로 반영되게 한다.
+         단, 이 파일이 static import하는 것(assets/transform.js 등)은
+         쿼리가 붙지 않아 Node ESM 캐시에 그대로 남는다.
+         공용 자산을 고쳤으면 서버를 재시작해야 반영된다. */
       const mod = await import(pathToFileURL(modPath).href + '?t=' + Date.now());
       req.query = Object.fromEntries(url.searchParams.entries());
       if (req.method === 'POST' || req.method === 'PUT') req.body = await readBody(req);
@@ -140,5 +143,7 @@ server.listen(PORT, () => {
   const gem = process.env.GEMINI_API_KEY;
   console.log(`\n  오늘의 대기질 — http://localhost:${PORT}\n`);
   console.log(`  AIRKOREA_SERVICE_KEY  ${key ? '설정됨 (' + key.length + '자)' : '없음 → .env.local을 채우세요'}`);
-  console.log(`  GEMINI_API_KEY        ${gem ? '설정됨' : '없음 → 조언은 정적 폴백으로 동작합니다'}\n`);
+  console.log(`  GEMINI_API_KEY        ${gem ? '설정됨' : '없음 → 조언은 정적 폴백으로 동작합니다'}`);
+  console.log('\n  assets/transform.js·grade.js를 고쳤다면 이 서버를 재시작하세요.');
+  console.log('  api/*.js는 매 요청 새로 읽지만 그것이 import하는 공용 자산은 캐시됩니다.\n');
 });
