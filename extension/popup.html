@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>오늘의 대기질</title>
+<!-- MV3 CSP는 원격 스크립트·스타일을 차단한다. 모든 자산은 패키지 안에 있다.
+     Pretendard CDN을 쓸 수 없으므로 시스템 폰트로 떨어진다 (liquid-glass.css의 폴백) -->
+<link rel="stylesheet" href="liquid-glass.css">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="popup.css">
+<script src="bootstrap.js"></script>
+</head>
+
+<body class="popup">
+
+<div class="scene" aria-hidden="true">
+  <div class="scene__blob scene__blob--a"></div>
+  <div class="scene__blob scene__blob--b"></div>
+</div>
+
+<!-- ── 키 미입력 화면 (PRD §7) ───────────────────────────────────────────── -->
+<section class="mat setup" id="setup" hidden>
+  <h1 class="setup__title">인증키를 입력하세요</h1>
+  <p class="setup__desc">
+    확장은 에어코리아를 직접 호출합니다. 공공데이터포털에서
+    <strong>대기오염정보(ArpltnInforInqireSvc)</strong> 활용신청 후 받은
+    <strong>일반 인증키(디코딩)</strong>를 넣어 주세요.
+  </p>
+  <a class="setup__link" id="setup-link"
+     href="https://www.data.go.kr/data/15073861/openapi.do" target="_blank" rel="noreferrer">
+    인증키 발급받기 →
+  </a>
+  <input class="setup__input" id="setup-key" type="password" autocomplete="off"
+         placeholder="일반 인증키 (디코딩)" aria-label="에어코리아 일반 인증키">
+  <input class="setup__input" id="setup-endpoint" type="url" autocomplete="off"
+         placeholder="조언 서버 주소 (선택 · 예: https://내앱.vercel.app)"
+         aria-label="AI 조언 서버 주소">
+  <p class="setup__hint">조언 서버를 비워 두면 AI 없이 기본 문구로 동작합니다.</p>
+  <button type="button" class="btn-retry" id="setup-save">저장하고 시작</button>
+  <p class="setup__error" id="setup-error" hidden></p>
+</section>
+
+<!-- ── 앱 ───────────────────────────────────────────────────────────────── -->
+<main class="app" id="app" hidden>
+
+  <div class="header-wrap lg-bar">
+    <header class="lg lg--regular header" data-lg-refract>
+      <div class="lg__content lg-toolbar">
+        <div class="brand">
+          <span class="brand__name">오늘의 대기질</span>
+        </div>
+        <div class="lg-spacer lg-spacer--flex"></div>
+        <div class="lg-group">
+          <button type="button" class="icon-btn knob" id="btn-refresh" aria-label="새로고침">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg>
+          </button>
+          <button type="button" class="icon-btn knob" id="btn-settings"
+                  aria-label="설정" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings-popover">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+  </div>
+
+  <nav class="lg lg--thin chipbar" data-lg-refract aria-label="시도 선택">
+    <div class="lg__content">
+      <div class="chiplist" id="chiplist">
+        <div class="chip-indicator" id="chip-indicator" aria-hidden="true"></div>
+      </div>
+    </div>
+  </nav>
+
+  <section class="mat card" id="card" aria-labelledby="card-city">
+    <div class="card__head">
+      <h1 class="card__city" id="card-city"><span class="skel">서울</span></h1>
+      <span class="basis">시도 평균</span>
+    </div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric__label">미세먼지 PM10</div>
+        <div class="metric__row">
+          <span class="metric__value" id="pm10-value"><span class="skel">00</span></span>
+          <span class="metric__unit">㎍/㎥</span>
+        </div>
+        <div id="pm10-badge"></div>
+      </div>
+      <div class="metric">
+        <div class="metric__label">초미세먼지 PM2.5</div>
+        <div class="metric__row">
+          <span class="metric__value" id="pm25-value"><span class="skel">00</span></span>
+          <span class="metric__unit">㎍/㎥</span>
+        </div>
+        <div id="pm25-badge"></div>
+      </div>
+    </div>
+    <div class="card__foot">
+      <p class="worst" id="worst"><span class="skel">가장 나쁜 곳</span></p>
+      <p class="meta" id="coverage"><span class="skel">00개 중 00개</span></p>
+      <p class="meta" id="datatime"><span class="skel">측정 시각</span></p>
+    </div>
+    <div class="fail" id="card-fail" hidden>
+      <p class="fail__msg" id="card-fail-msg">데이터를 불러오지 못했습니다.</p>
+      <button type="button" class="btn-retry" data-retry="all">다시 시도</button>
+    </div>
+  </section>
+
+  <section class="mat station" id="station">
+    <button type="button" class="station__trigger" id="station-trigger"
+            aria-haspopup="listbox" aria-expanded="false" aria-controls="station-popover">
+      <span class="station__name" id="station-name">측정소</span>
+      <span class="station__val" id="station-val"></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+
+    <!-- 팝업 높이 예산(§6.5·R9) — 추이는 기본 접힘이다 -->
+    <button type="button" class="details__toggle" id="chart-toggle"
+            aria-expanded="false" aria-controls="chart-wrap">
+      <span>24시간 추이 보기</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+
+    <div class="chart-wrap" id="chart-wrap" hidden>
+      <p class="chart-title" id="chart-title">24시간 추이</p>
+      <div class="chart-box"><canvas id="chart" role="img" aria-label="선택한 측정소의 24시간 PM10·PM2.5 추이"></canvas></div>
+      <p class="chart-summary" id="chart-summary"></p>
+    </div>
+
+    <div class="fail" id="chart-fail" hidden>
+      <p class="fail__msg">추이를 불러오지 못했습니다.</p>
+      <button type="button" class="btn-retry" data-retry="station">다시 시도</button>
+    </div>
+  </section>
+
+  <section class="mat forecast" id="forecast">
+    <h2 class="section-header" id="forecast-header">3일 예보</h2>
+    <div class="forecast__grid" id="forecast-grid"></div>
+  </section>
+
+  <section class="mat advice" id="advice">
+    <h2 class="section-header" id="advice-header">
+      오늘은 이렇게
+      <span class="section-header__sub" id="advice-source"></span>
+    </h2>
+    <div class="advice__list">
+      <div class="advice__row">
+        <span class="advice__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h11a3 3 0 1 0-3-3"/><path d="M3 17h8a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 7h6a2 2 0 1 0-2-2"/></svg></span>
+        <div class="advice__body">
+          <div class="advice__label">환기</div>
+          <p class="advice__text" id="advice-ventilation"><span class="skel">준비 중</span></p>
+        </div>
+      </div>
+      <div class="advice__row">
+        <span class="advice__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9c2.5-1 4.5-1.5 8-1.5S17.5 8 20 9"/><path d="M4 9v3a8 8 0 0 0 16 0V9"/><path d="M2 10.5 4 9M22 10.5 20 9"/></svg></span>
+        <div class="advice__body">
+          <div class="advice__label">마스크</div>
+          <p class="advice__text" id="advice-mask"><span class="skel">준비 중</span></p>
+        </div>
+      </div>
+      <div class="advice__row">
+        <span class="advice__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.5 6.5 4 9l3 3-3 3 2.5 2.5"/><path d="M17.5 6.5 20 9l-3 3 3 3-2.5 2.5"/><path d="M9 12h6"/></svg></span>
+        <div class="advice__body">
+          <div class="advice__label">운동</div>
+          <p class="advice__text" id="advice-exercise"><span class="skel">준비 중</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mat mat--thin details" id="details">
+    <button type="button" class="details__toggle" id="details-toggle"
+            aria-expanded="false" aria-controls="details-body">
+      <span>더보기 · O₃ · NO₂ · CO · SO₂ · 통합지수</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div id="details-body" hidden>
+      <p class="details__basis" id="details-basis"></p>
+      <div class="details__grid" id="details-grid"></div>
+    </div>
+  </section>
+
+</main>
+
+<div class="lg lg--thin popover" id="station-popover" role="listbox" aria-label="측정소 선택" hidden>
+  <div class="lg__content" id="station-list"></div>
+</div>
+
+<div class="lg lg--thin popover" id="settings-popover" role="dialog" aria-label="설정" hidden>
+  <div class="lg__content">
+    <div class="settings__group">
+      <div class="settings__title">화면</div>
+      <div class="settings__row">
+        <span>테마</span>
+        <div class="seg" id="seg-theme" role="group" aria-label="테마">
+          <button type="button" data-theme-value="auto"  aria-pressed="true">자동</button>
+          <button type="button" data-theme-value="light" aria-pressed="false">라이트</button>
+          <button type="button" data-theme-value="dark"  aria-pressed="false">다크</button>
+        </div>
+      </div>
+    </div>
+    <!-- 팝업은 380px 고정이라 데스크톱 2컬럼 래퍼(.app__grid)를 쓰지 않는다.
+         유리 투명도 슬라이더는 웹과 동일하게 제공한다 -->
+    <div class="settings__group" id="glass-group">
+      <div class="settings__title">유리</div>
+      <div class="settings__slider">
+        <div class="settings__slider-head">
+          <label for="glass-range">투명도</label>
+          <span class="settings__value" id="glass-value">기본</span>
+        </div>
+        <input type="range" class="lg-range" id="glass-range"
+               min="25" max="160" step="5" value="100"
+               aria-describedby="glass-note">
+        <div class="settings__scale" aria-hidden="true"><span>투명</span><span>진하게</span></div>
+      </div>
+      <p class="settings__note" id="glass-note">틴트와 흐림이 함께 조절됩니다.</p>
+    </div>
+
+    <div class="settings__group">
+      <div class="settings__title">접근성</div>
+      <div class="settings__row">
+        <span>투명 효과 줄이기</span>
+        <button type="button" class="switch" id="sw-transparency" role="switch" aria-checked="false"
+                aria-label="투명 효과 줄이기"></button>
+      </div>
+      <div class="settings__row">
+        <span>모션 줄이기</span>
+        <button type="button" class="switch" id="sw-motion" role="switch" aria-checked="false"
+                aria-label="모션 줄이기"></button>
+      </div>
+    </div>
+    <div class="settings__group">
+      <div class="settings__title">계정</div>
+      <div class="settings__row">
+        <span>인증키 다시 입력</span>
+        <button type="button" class="btn-retry" id="btn-reset-key">변경</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="visually-hidden" role="status" aria-live="polite" id="live-region"></div>
+
+<script src="grade.js"></script>
+<script src="transform.js"></script>
+<script src="lg-runtime.js"></script>
+<script src="popup-chart.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

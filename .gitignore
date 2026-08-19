@@ -1,0 +1,16 @@
+# 환경변수 — 절대 커밋하지 않는다 (PRD §6.4)
+.env
+.env.local
+.env.*.local
+
+# 의존성 / 빌드 산출물
+node_modules/
+.vercel/
+dist/
+
+# OS / 편집기
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

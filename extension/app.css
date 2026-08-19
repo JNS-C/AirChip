@@ -1,0 +1,531 @@
+/* ==========================================================================
+   app.css — 오늘의 대기질 (AirChip)
+   liquid-glass.css의 토큰만 소비한다. 여기서 새 색·곡률을 발명하지 않는다.
+   예외: 등급 팔레트는 앱 도메인 토큰이라 DESIGN에 원본이 없다 (D)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. 리셋 & 베이스
+   -------------------------------------------------------------------------- */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+/* 명시적 background-color가 없으면 흰색으로 떨어진다 (§11.3) */
+html, body {
+  background-color: var(--scene-base);
+  color: var(--vib-label);
+  font-family: var(--font-stack);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body { min-height: 100dvh; }
+
+button { font: inherit; color: inherit; cursor: pointer; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* --------------------------------------------------------------------------
+   1. 씬 — §5.1
+   유리는 배경이 단조로우면 보이지 않는다. 채도·명도 대비가 전제 조건이다.
+   -------------------------------------------------------------------------- */
+.scene {
+  position: fixed; inset: 0; z-index: -1;
+  background: var(--scene-base);
+  overflow: hidden;
+}
+.scene__blob {
+  position: absolute;
+  border-radius: 50%;
+  opacity: .85;
+}
+/* 블롭을 전부 똑같이 뭉개면 유리 밑이 평평해져 휘어도 티가 안 난다.
+   저주파(큰 색면) + 고주파(선명한 가장자리)를 섞어야 굴절이 읽힌다 (§5.1) */
+.scene__blob--a {
+  width: 78vmax; height: 78vmax;
+  top: -32vmax; left: -22vmax;
+  filter: blur(70px);
+  background: radial-gradient(circle at 40% 40%, var(--scene-accent-a), transparent 68%);
+}
+.scene__blob--b {
+  width: 66vmax; height: 66vmax;
+  right: -26vmax; top: 18vmax;
+  filter: blur(70px);
+  background: radial-gradient(circle at 60% 40%, var(--scene-accent-b), transparent 68%);
+}
+/* 이 블롭만 블러를 낮춰 가장자리를 남긴다 — 굴절이 꺾을 대상이다 */
+.scene__blob--c {
+  width: 46vmax; height: 46vmax;
+  left: 6vmax; bottom: -22vmax;
+  filter: blur(44px);
+  background: radial-gradient(circle at 50% 50%, var(--scene-accent-a), transparent 62%);
+  opacity: .62;
+}
+
+/* --------------------------------------------------------------------------
+   2. 레이아웃 — 모바일 우선. 360px에서 깨지지 않는다
+   -------------------------------------------------------------------------- */
+.app {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 12px 12px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 헤더·칩바는 이 그리드 밖 형제로 둔다.
+   .app 자체를 그리드로 만들면 sticky 헤더의 이동 범위가 자기 그리드 행에 갇혀
+   sticky가 사실상 죽는다. 래퍼를 한 겹 두는 이유가 이것이다. */
+.app__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;    /* 그리드 자식이 내용 폭에 밀려 넘치지 않게 한다 */
+}
+
+.section-header {
+  display: flex; align-items: baseline; gap: 8px;
+  margin: 0 0 8px;
+}
+.section-header__sub { font-size: 12px; font-weight: 500; color: var(--vib-label-3); }
+
+/* --------------------------------------------------------------------------
+   3. 헤더 — 기능 레이어. 굴절 표면 #1
+   -------------------------------------------------------------------------- */
+.header-wrap { position: sticky; top: 0; z-index: 30; padding-top: 8px; }
+.header { --r: var(--lg-radius); }
+.header .lg__content {
+  display: flex; align-items: center;
+  padding: 10px 12px;
+  min-height: 56px;
+}
+.brand { display: flex; align-items: baseline; gap: 8px; }
+.brand__name { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.brand__sub  { font-size: 12px; font-weight: 500; color: var(--vib-label-3); }
+
+/* 한 배경을 공유하는 아이템끼리 텍스트와 아이콘을 섞지 않는다 (§8.3 A)
+   → 헤더 우측 그룹은 아이콘 전용 */
+.icon-btn {
+  inline-size: 40px; block-size: 40px;
+  display: grid; place-items: center;
+  border-radius: calc(var(--lg-radius) - 8px);   /* 동심 규칙 §7.2 */
+}
+.icon-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none;
+                stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn[data-busy="1"] svg { animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --------------------------------------------------------------------------
+   4. 칩 — 기능 레이어. 굴절 표면 #2
+   컨테이너 하나만 유리다. 개별 칩에는 배경을 얹지 않는다 (§1.4)
+   선택 상태는 §10.2(b) 비-backdrop 인디케이터가 표현한다
+   -------------------------------------------------------------------------- */
+.chipbar { --r: var(--lg-radius-sm); }
+.chipbar .lg__content { padding: 6px; }
+.chiplist {
+  position: relative;
+  display: flex; flex-wrap: wrap; gap: 4px;   /* 가로 스크롤 사용 안 함 (PRD §3.2) */
+}
+.chip {
+  position: relative;
+  z-index: 1;
+  padding: 8px 12px;
+  border-radius: calc(var(--lg-radius-sm) - 6px);   /* 동심 규칙 */
+  font-size: 14px; font-weight: 550;
+  color: var(--vib-label-2);
+  border: 1px solid transparent;
+  transition: color var(--lg-dur) var(--lg-ease),
+              border-color var(--lg-dur) var(--lg-ease),
+              transform var(--lg-dur) var(--lg-ease);
+}
+.chip:hover { color: var(--vib-label); }
+.chip:active { transform: scale(.97); }
+/* 3중 표현 — 인디케이터 틴트(배경) + 액센트 테두리 + 굵기. 색 단독 금지 */
+.chip[aria-pressed="true"] {
+  color: var(--vib-label);
+  font-weight: 700;
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+/* 인디케이터는 배경을 읽지 않는 순수 형태 레이어다. backdrop-filter 금지 (§10.2 b) */
+.chip-indicator {
+  position: absolute; top: 0; left: 0;
+  width: 0; height: 0;
+  border-radius: calc(var(--lg-radius-sm) - 6px);
+  background: var(--lg-tint-prominent);
+  box-shadow: inset 0 1px .5px var(--lg-rim-top);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: transform var(--lg-dur) var(--lg-ease),
+              width var(--lg-dur) var(--lg-ease),
+              height var(--lg-dur) var(--lg-ease),
+              opacity var(--lg-dur) var(--lg-ease);
+}
+.chip-indicator[data-ready="1"] { opacity: 1; }
+
+/* 팝오버가 열리면 칩 바를 콘텐츠 레이어로 강등한다 — 굴절 표면 2개 상한 유지 (§8.4) */
+body[data-popover-open="1"] .chipbar {
+  backdrop-filter: var(--mat-thin); -webkit-backdrop-filter: var(--mat-thin);
+}
+
+/* --------------------------------------------------------------------------
+   5. 등급 배지 — 색 + 텍스트 + 아이콘 3중 (§12.1 / PRD §4.5)
+   -------------------------------------------------------------------------- */
+:root {
+  --grade-1: #1B77D6;   /* 좋음 */
+  --grade-2: #1E8E4E;   /* 보통 */
+  --grade-3: #B96A00;   /* 나쁨 */
+  --grade-4: #C0353A;   /* 매우나쁨 */
+  --grade-0: #6B7280;   /* 측정 불가 */
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --grade-1: #6BB6FF; --grade-2: #57D98A; --grade-3: #FFB454;
+    --grade-4: #FF7B7F; --grade-0: #9AA3B2;
+  }
+}
+:root[data-theme="dark"] {
+  --grade-1: #6BB6FF; --grade-2: #57D98A; --grade-3: #FFB454;
+  --grade-4: #FF7B7F; --grade-0: #9AA3B2;
+}
+
+/* 차트 계열 색 — DESIGN에 원본이 없는 앱 토큰 (D).
+   PM10은 액센트, PM2.5는 씬 액센트 b 계열. 선 모양(실선/점선)으로도 구분한다 */
+:root { --series-pm10: var(--accent); --series-pm25: #A8437E; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --series-pm25: #FF9EC7; }
+}
+:root[data-theme="dark"] { --series-pm25: #FF9EC7; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 550;
+  color: var(--g-color);
+  border: 1px solid color-mix(in srgb, var(--g-color) 45%, transparent);
+  background: color-mix(in srgb, var(--g-color) 14%, transparent);
+  white-space: nowrap;
+}
+.badge svg { width: 13px; height: 13px; flex: none; fill: currentColor; }
+.badge[data-grade="1"] { --g-color: var(--grade-1); }
+.badge[data-grade="2"] { --g-color: var(--grade-2); }
+.badge[data-grade="3"] { --g-color: var(--grade-3); }
+.badge[data-grade="4"] { --g-color: var(--grade-4); }
+.badge[data-grade="0"] { --g-color: var(--grade-0); }
+
+/* --------------------------------------------------------------------------
+   6. 메인 카드 — 콘텐츠 레이어
+   -------------------------------------------------------------------------- */
+.card { padding: 18px var(--row-pad-x) 16px; }
+
+.card__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.card__city { font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+/* 기준 라벨 — 두 숫자의 성격이 다르다는 것을 명시한다 (PRD §1.4) */
+.basis {
+  font-size: 12px; font-weight: 550;
+  color: var(--vib-label-3);
+  border: 1px solid color-mix(in srgb, var(--vib-label-3) 40%, transparent);
+  border-radius: 999px; padding: 2px 8px;
+}
+
+.metrics {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-top: 14px;
+}
+.metric {
+  border-radius: calc(var(--section-radius) - 6px);   /* 동심 규칙 */
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--vib-label) 6%, transparent);
+}
+.metric__label { font-size: 12px; font-weight: 550; color: var(--vib-label-2); }
+.metric__row { display: flex; align-items: baseline; gap: 6px; margin: 4px 0 8px; }
+.metric__value { font-size: 34px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
+.metric__unit { font-size: 12px; font-weight: 500; color: var(--vib-label-3); }
+.metric__value[data-unavailable="1"] { font-size: 20px; color: var(--vib-label-3); }
+
+.card__foot { margin-top: 14px; display: flex; flex-direction: column; gap: 4px; }
+.worst { font-size: 13px; font-weight: 550; color: var(--vib-label-2); }
+.worst strong { font-weight: 700; color: var(--vib-label); }
+.meta { font-size: 12px; font-weight: 500; color: var(--vib-label-3); }
+.meta--stale { color: var(--grade-3); }
+
+/* --------------------------------------------------------------------------
+   7. 측정소 상세 — 드롭다운(팝오버) + 24시간 추이
+   -------------------------------------------------------------------------- */
+.station { padding: 14px var(--row-pad-x) 16px; }
+
+.station__trigger {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: calc(var(--section-radius) - 6px);
+  border: 1px solid color-mix(in srgb, var(--vib-label) 16%, transparent);
+  background: color-mix(in srgb, var(--vib-label) 5%, transparent);
+  font-size: 15px; font-weight: 550;
+  text-align: left;
+}
+.station__trigger:hover { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.station__trigger svg { width: 16px; height: 16px; flex: none; stroke: currentColor;
+                        fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.station__name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.station__val { font-size: 13px; font-weight: 550; color: var(--vib-label-3); }
+
+/* 팝오버 — 트리거에서 나온다. 모달 스크림을 깔지 않는다 (§9.5 A) */
+.popover {
+  position: fixed;
+  z-index: 60;
+  min-width: 220px;
+  max-height: min(340px, 60dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  --r: var(--lg-radius-sm);
+}
+.popover[hidden] { display: none; }
+.popover__item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: calc(var(--lg-radius-sm) - 6px);
+  font-size: 14px; font-weight: 550;
+  text-align: left;
+}
+.popover__item:hover,
+.popover__item[data-active="1"] { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.popover__item[aria-selected="true"] { font-weight: 700; }
+.popover__item-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.popover__item-val { font-size: 12px; font-weight: 550; color: var(--vib-label-3); }
+.popover__check { width: 14px; flex: none; opacity: 0; }
+.popover__item[aria-selected="true"] .popover__check { opacity: 1; }
+
+/* 설정 팝오버 (§12.2 — iOS에서 유일한 접근성 경로) */
+.settings__group { padding: 8px 10px 10px; }
+.settings__title { font-size: 12px; font-weight: 550; color: var(--vib-label-3); margin-bottom: 6px; }
+.settings__row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 10px; border-radius: 12px;
+  font-size: 14px; font-weight: 550;
+}
+.seg { display: flex; gap: 2px; }
+.seg button {
+  padding: 6px 10px; border-radius: 10px;
+  font-size: 13px; font-weight: 550; color: var(--vib-label-2);
+}
+.seg button[aria-pressed="true"] {
+  color: var(--vib-label);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: inset 0 1px .5px var(--lg-rim-top);
+}
+.switch {
+  inline-size: 46px; block-size: 28px; flex: none;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--vib-label) 22%, transparent);
+  background: color-mix(in srgb, var(--vib-label) 10%, transparent);
+  position: relative;
+  transition: background var(--lg-dur) var(--lg-ease);
+}
+.switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  inline-size: 22px; block-size: 22px; border-radius: 50%;
+  background: var(--vib-label);
+  transition: transform var(--lg-dur) var(--lg-ease);
+}
+.switch[aria-checked="true"] { background: color-mix(in srgb, var(--accent) 60%, transparent); }
+.switch[aria-checked="true"]::after { transform: translateX(18px); }
+
+/* 투명도 슬라이더 행 — 라벨과 현재 값을 한 줄, 트랙을 그 아래 */
+.settings__slider { display: block; padding: 8px 10px 4px; }
+.settings__slider-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  font-size: 14px; font-weight: 550;
+  margin-bottom: 6px;
+}
+.settings__value { font-size: 12px; font-weight: 550; color: var(--vib-label-3); font-variant-numeric: tabular-nums; }
+.settings__scale {
+  display: flex; justify-content: space-between;
+  font-size: 11px; font-weight: 500; color: var(--vib-label-3);
+  margin-top: 2px;
+}
+/* 대비는 틴트가 책임진다(§12.1). 얇게 내리면 실제로 대비가 떨어지므로 말해 준다 */
+.settings__note {
+  font-size: 11px; font-weight: 500; line-height: 1.5;
+  color: var(--vib-label-3);
+  padding: 4px 10px 0;
+}
+.settings__note--warn { color: var(--grade-3); }
+.settings__group[data-locked="1"] .settings__slider-head,
+.settings__group[data-locked="1"] .settings__scale { opacity: .45; }
+
+/* 차트 */
+.chart-wrap { margin-top: 14px; }
+.chart-title { font-size: 13px; font-weight: 550; color: var(--vib-label-2); margin-bottom: 8px; }
+.chart-box { position: relative; height: 190px; }
+.chart-summary {
+  margin-top: 10px;
+  font-size: 12px; font-weight: 500; line-height: 1.55;
+  color: var(--vib-label-3);
+}
+
+/* --------------------------------------------------------------------------
+   8. 3일 예보
+   -------------------------------------------------------------------------- */
+.forecast { padding: 14px var(--row-pad-x) 16px; }
+.forecast__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.fc-cell {
+  border-radius: calc(var(--section-radius) - 6px);
+  padding: 12px 10px;
+  background: color-mix(in srgb, var(--vib-label) 6%, transparent);
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  min-height: 118px;
+}
+.fc-cell__day { font-size: 13px; font-weight: 700; }
+.fc-cell__date { font-size: 11px; font-weight: 500; color: var(--vib-label-3); }
+.fc-cell__line { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 550; color: var(--vib-label-3); }
+.fc-cell__split { font-size: 11px; font-weight: 500; color: var(--vib-label-3); line-height: 1.4; }
+.fc-cell--empty { justify-content: center; align-items: center; color: var(--vib-label-3); font-size: 13px; }
+
+/* --------------------------------------------------------------------------
+   9. 조언
+   -------------------------------------------------------------------------- */
+.advice { padding: 14px var(--row-pad-x) 16px; }
+.advice__list { display: flex; flex-direction: column; gap: 2px; }
+.advice__row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
+.advice__icon {
+  inline-size: 30px; block-size: 30px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.advice__icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none;
+                    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.advice__body { flex: 1 1 auto; }
+.advice__label { font-size: 12px; font-weight: 550; color: var(--vib-label-3); }
+.advice__text { font-size: 15px; font-weight: 550; line-height: 1.45; margin-top: 2px; }
+
+/* --------------------------------------------------------------------------
+   10. 더보기 — 기본 접힘
+   -------------------------------------------------------------------------- */
+.details { padding: 4px var(--row-pad-x) 6px; }
+.details__toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; min-height: 48px; padding: 0;
+  font-size: 14px; font-weight: 550;
+}
+.details__toggle svg { width: 16px; height: 16px; stroke: currentColor; fill: none;
+                       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+                       transition: transform var(--lg-dur) var(--lg-ease); }
+.details__toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.details__grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px;
+  padding-bottom: 14px;
+}
+.details__item {
+  border-radius: 12px; padding: 10px;
+  background: color-mix(in srgb, var(--vib-label) 6%, transparent);
+}
+.details__key { font-size: 11px; font-weight: 550; color: var(--vib-label-3); }
+.details__val { font-size: 17px; font-weight: 700; margin-top: 4px; }
+.details__basis { font-size: 11px; font-weight: 500; color: var(--vib-label-3); padding: 0 0 12px; }
+
+/* --------------------------------------------------------------------------
+   11. 상태 — 스켈레톤 / 오류 (§7)
+   레이아웃 흔들림 없이 형태를 유지한다
+   -------------------------------------------------------------------------- */
+.skel {
+  display: inline-block;
+  border-radius: 8px;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--vib-label) 9%, transparent) 25%,
+    color-mix(in srgb, var(--vib-label) 16%, transparent) 37%,
+    color-mix(in srgb, var(--vib-label) 9%, transparent) 63%);
+  background-size: 400% 100%;
+  animation: skel 1.4s ease infinite;
+  color: transparent !important;
+}
+@keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+:root[data-motion="off"] .skel { animation: none; }
+
+.fail {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  padding: 18px var(--row-pad-x);
+}
+.fail__msg { font-size: 14px; font-weight: 550; color: var(--vib-label-2); }
+.btn-retry {
+  padding: 9px 16px; border-radius: 999px;
+  font-size: 14px; font-weight: 550;
+  color: var(--vib-label);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.btn-retry:hover { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+
+[hidden] { display: none !important; }
+
+/* --------------------------------------------------------------------------
+   12. 반응형 — 모바일 우선. 360px 하한을 지키고 위로 넓힌다
+   확장 팝업은 뷰포트가 380px이므로 아래 min-width 쿼리가 전부 비활성이다
+   -------------------------------------------------------------------------- */
+
+/* 소형 — 360~400px */
+@media (max-width: 400px) {
+  .app { padding: 10px 10px 48px; gap: 12px; }
+  :root { --row-pad-x: 14px; }
+  .metric__value { font-size: 30px; }
+  .chip { padding: 7px 10px; font-size: 13px; }
+  .fc-cell { padding: 10px 8px; min-height: 112px; }
+}
+
+/* 태블릿 — 단일 컬럼을 유지하되 숨 쉴 공간을 준다 (§6.2 A) */
+@media (min-width: 640px) {
+  :root { --row-pad-x: 24px; --row-pad-y: 16px; }
+  .app { max-width: 720px; padding: 16px 16px 64px; gap: 16px; }
+  .app__grid { gap: 16px; }
+  .col { gap: 16px; }
+  .metric__value { font-size: 40px; }
+  .card__city { font-size: 26px; }
+  .chart-box { height: 240px; }
+  .chip { padding: 9px 14px; font-size: 15px; }
+  .advice__text { font-size: 16px; }
+}
+
+/* 데스크톱 — 2컬럼. 헤더·칩바는 전폭이므로 그리드 밖에 있다 */
+@media (min-width: 1024px) {
+  .app { max-width: 1120px; padding: 20px 20px 72px; }
+  .app__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  .chart-box { height: 280px; }
+  .metrics { gap: 14px; }
+  .forecast__grid { gap: 10px; }
+  /* 칩 17개가 한두 줄에 떨어진다. 가로 스크롤은 여전히 쓰지 않는다 */
+  .chiplist { gap: 6px; }
+}
+
+/* 초광폭 — 폭을 무한정 늘리지 않는다. 줄 길이가 읽기 한계를 넘는다 */
+@media (min-width: 1440px) {
+  .app { max-width: 1240px; }
+  .app__grid { gap: 20px; }
+  .chart-box { height: 320px; }
+}
+
+/* 가로가 짧은 화면에서 sticky 헤더가 본문을 다 덮지 않게 한다 */
+@media (max-height: 520px) {
+  .header-wrap { position: static; }
+}

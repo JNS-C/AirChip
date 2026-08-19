@@ -1,0 +1,16 @@
+{
+  "name": "airchip",
+  "version": "1.0.0",
+  "private": true,
+  "description": "오늘의 대기질 — 실시간 미세먼지 · 측정소 24시간 추이 · 3일 예보",
+  "type": "module",
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "sync:ext": "node scripts/sync-extension.mjs",
+    "verify": "node scripts/verify-rules.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

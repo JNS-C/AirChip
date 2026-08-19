@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "오늘의 대기질",
+  "version": "1.0.0",
+  "description": "툴바에서 바로 보는 실시간 대기질",
+  "icons": { "48": "icon48.png", "128": "icon128.png" },
+  "action": { "default_popup": "popup.html", "default_title": "오늘의 대기질" },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://apis.data.go.kr/*",
+    "https://*.vercel.app/*"
+  ]
+}

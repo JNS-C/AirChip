@@ -1,0 +1,81 @@
+/* ==========================================================================
+   popup.css — 확장 팝업 전용 조정
+   높이 예산: 크롬 최대 600px. 추이 접힘 기준 약 540px (PRD §6.5 · R9)
+   팝업에도 씬을 깐다 — 배경 대비 없이는 유리가 성립하지 않는다 (DESIGN §5.1)
+   ========================================================================== */
+
+html, body.popup {
+  inline-size: 380px;
+  max-block-size: 600px;
+  overflow-x: hidden;
+}
+
+body.popup .app {
+  max-width: none;
+  padding: 8px 10px 12px;
+  gap: 10px;
+}
+
+/* 씬 블롭은 팝업 크기에 맞춰 줄인다 */
+body.popup .scene__blob--a { width: 520px; height: 520px; top: -240px; left: -200px; }
+body.popup .scene__blob--b { width: 460px; height: 460px; right: -220px; top: 120px; }
+
+/* 팝업에서 헤더는 sticky일 이유가 없다 — 스크롤이 생기면 안 되는 화면이다 */
+body.popup .header-wrap { position: static; padding-top: 0; }
+body.popup .header .lg__content { min-height: 48px; padding: 8px 10px; }
+body.popup .icon-btn { inline-size: 36px; block-size: 36px; }
+
+/* 칩 4줄 ≒ 140px */
+body.popup .chip { padding: 6px 9px; font-size: 12px; }
+body.popup .chipbar .lg__content { padding: 5px; }
+
+/* 메인 카드 ≒ 180px */
+body.popup .card { padding: 14px 16px 12px; }
+body.popup .metric__value { font-size: 28px; }
+body.popup .metric { padding: 10px 12px; }
+body.popup .card__city { font-size: 19px; }
+
+/* 측정소 선택 ≒ 40px */
+body.popup .station { padding: 10px 16px 12px; }
+body.popup .station__trigger { min-height: 40px; padding: 8px 10px; font-size: 14px; }
+
+/* 3일 예보 ≒ 90px */
+body.popup .forecast { padding: 10px 16px 12px; }
+body.popup .fc-cell { min-height: 92px; padding: 9px 8px; gap: 6px; }
+body.popup .fc-cell__day { font-size: 12px; }
+
+/* 조언 ≒ 90px */
+body.popup .advice { padding: 10px 16px 12px; }
+body.popup .advice__row { padding: 7px 0; }
+body.popup .advice__text { font-size: 14px; }
+body.popup .advice__icon { inline-size: 26px; block-size: 26px; }
+
+body.popup .details { padding: 2px 16px 4px; }
+body.popup .details__toggle { min-height: 40px; font-size: 13px; }
+
+body.popup .chart-box { height: 150px; }
+body.popup .popover { max-height: 260px; }
+
+/* --------------------------------------------------------------------------
+   키 미입력 화면 (PRD §7)
+   -------------------------------------------------------------------------- */
+.setup {
+  margin: 12px 10px;
+  padding: 18px 18px 20px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.setup__title { font-size: 18px; font-weight: 700; margin: 0; }
+.setup__desc { font-size: 13px; font-weight: 450; line-height: 1.6; color: var(--vib-label-2); margin: 0; }
+.setup__link { font-size: 13px; font-weight: 550; color: var(--accent); text-decoration: none; }
+.setup__link:hover { text-decoration: underline; }
+.setup__input {
+  font: inherit; font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--vib-label) 22%, transparent);
+  background: color-mix(in srgb, var(--vib-label) 6%, transparent);
+  color: var(--vib-label);
+}
+.setup__input:focus-visible { border-color: var(--accent); }
+.setup__hint { font-size: 11px; font-weight: 450; color: var(--vib-label-3); margin: 0; }
+.setup__error { font-size: 12px; font-weight: 550; color: var(--grade-4); margin: 0; }
