@@ -196,6 +196,31 @@
   }
 
   /* ------------------------------------------------------------------------
+     3.5 Scroll edge effect — §9.1 ★
+     콘텐츠가 바 아래로 지나갈 때만 바의 틴트를 올린다. 도형을 그리지 않으므로
+     바의 둥근 모서리를 그대로 따르고, 맨 위에서는 아무 변화가 없다.
+     rAF 루프는 돌리지 않는다 — passive 리스너에서 임계값만 비교한다 (부록 C 방침)
+     ------------------------------------------------------------------------ */
+  var SCROLL_EDGE_THRESHOLD = 8;
+  var scrolledNow = null;
+
+  function syncScrollEdge() {
+    var scrolled = (global.scrollY || document.documentElement.scrollTop || 0) > SCROLL_EDGE_THRESHOLD;
+    if (scrolled === scrolledNow) return;      // 값이 바뀔 때만 DOM을 만진다
+    scrolledNow = scrolled;
+    document.querySelectorAll('.lg-bar').forEach(function (bar) {
+      if (scrolled) bar.setAttribute('data-scrolled', '1');
+      else bar.removeAttribute('data-scrolled');
+    });
+  }
+
+  function initScrollEdge() {
+    syncScrollEdge();
+    global.addEventListener('scroll', syncScrollEdge, { passive: true });
+    global.addEventListener('resize', syncScrollEdge, { passive: true });
+  }
+
+  /* ------------------------------------------------------------------------
      4. 팝오버 — §9.5
      액션시트는 화면 하단이 아니라 그 동작을 시작한 요소로부터 나온다.
      모달 스크림을 깔지 않는다 — 뒤쪽이 계속 조작 가능해야 한다.
@@ -355,6 +380,7 @@
     initRefraction: initRefraction,
     registerSurface: registerSurface,
     refreshAllSurfaces: refreshAllSurfaces,
+    initScrollEdge: initScrollEdge,
     openPopover: openPopover,
     togglePopover: togglePopover,
     closePopover: closeAll,

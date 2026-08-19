@@ -310,6 +310,8 @@
 .lg::before {   /* z:1 tint — 가독성을 책임지는 층 */
   content: ""; position: absolute; inset: 0; z-index: 1;
   background: var(--lg-tint); pointer-events: none;
+  /* 스크롤 엣지가 이 배경을 바꾼다. 급하게 튀지 않게 전환을 건다 */
+  transition: background var(--lg-dur) var(--lg-ease);
 }
 .lg::after {    /* z:2 specular — 상단 림 하이라이트. 광원은 항상 위 */
   content: ""; position: absolute; inset: 0; z-index: 2;
@@ -358,18 +360,23 @@
 /* --------------------------------------------------------------------------
    5. Scroll edge effect — §9.1 ★
    바 전체에 mask-image를 걸지 않는다. 자손 콘텐츠까지 지워진다 (§13).
-   문서가 기본안으로 권하는 "스크림 한 겹"을 채택한다.
+
+   별도의 스크림 사각형도 그리지 않는다. 둥근 바 아래에 각진 띠가 깔리면
+   바와 아래 영역이 이어 붙어 보인다 — 실제로 그렇게 보였다.
+   HIG는 이 효과를 "지나가는 콘텐츠를 블러하고 불투명도를 낮춘다"로 설명하므로,
+   바 자신의 틴트를 올리면 같은 결과가 나오면서 둥근 모서리를 그대로 따른다.
    -------------------------------------------------------------------------- */
 .lg-bar { position: relative; isolation: isolate; }
-.lg-bar::after {
-  content: ""; position: absolute; inset: auto 0 -28px 0; height: 28px;
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--scene-base) 85%, transparent), transparent);
-  pointer-events: none;
-  z-index: 2;
+
+/* 스크롤을 내렸을 때만 켜진다. 맨 위에서는 아무 변화가 없다.
+   --lg-tint-a1/a2를 덮어쓰는 방식은 통하지 않는다 — 커스텀 속성은 선언된 요소에서
+   치환되므로 :root에서 조립된 --lg-tint-regular는 자손이 알파를 바꿔도 그대로다.
+   요소에 --lg-tint를 직접 얹어야 한다. */
+.lg-bar[data-scrolled="1"] > .lg {
+  --lg-tint: linear-gradient(180deg,
+    rgba(var(--lg-tint-rgb), calc(.26 * var(--glass-level))),
+    rgba(var(--lg-tint-rgb), calc(.15 * var(--glass-level))));
 }
-/* .lg와 겹칠 때 ::after는 스페큘러가 이미 쓰고 있으므로 스크림은 래퍼에 건다 */
-.lg-bar > .lg { border-radius: var(--lg-radius); }
 
 /* --------------------------------------------------------------------------
    6. 콘텐츠 레이어 — standard materials (§5.4 A)
@@ -523,8 +530,11 @@
 
 /* 모션 — 이건 전 브라우저 지원된다 */
 @media (prefers-reduced-motion: reduce) {
-  .lg, .mat, .knob, .sheet, .seg-indicator, .lg::after { transition: none !important; animation: none !important; }
+  .lg, .mat, .knob, .sheet, .seg-indicator,
+  .lg::before, .lg::after { transition: none !important; animation: none !important; }
 }
+:root[data-motion="off"] :is(.lg, .mat, .knob, .sheet, .seg-indicator)::before,
+:root[data-motion="off"] :is(.lg, .mat, .knob, .sheet, .seg-indicator)::after,
 :root[data-motion="off"] :is(.lg, .mat, .knob, .sheet, .seg-indicator) {
   transition: none !important; animation: none !important;
 }

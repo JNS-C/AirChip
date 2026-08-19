@@ -687,6 +687,9 @@
       if (wrap) wrap.hidden = true;
     }
 
+    /* 스크롤 엣지 (§9.1) — 콘텐츠가 헤더 밑으로 지나갈 때만 틴트가 진해진다 */
+    global.LG.initScrollEdge();
+
     /* 굴절 맵은 티어 A에서만, 첫 페인트 이후에 만든다 (§8 성능 / 부록 C) */
     var startRefraction = function () { global.LG.initRefraction('[data-lg-refract]'); };
     if (global.requestIdleCallback) global.requestIdleCallback(startRefraction, { timeout: 1200 });
