@@ -487,6 +487,10 @@ body[data-popover-open="1"] .chipbar {
 
 /* 차트 */
 .chart-wrap { margin-top: 14px; }
+/* 추이는 카드보다 늦게 도착한다. 오는 동안 이전 값을 그대로 두면 오해를 부른다 */
+.chart-wrap[data-busy="1"] { opacity: .4; transition: opacity 160ms ease; }
+@media (prefers-reduced-motion: reduce) { .chart-wrap[data-busy="1"] { transition: none; } }
+:root[data-motion="off"] .chart-wrap[data-busy="1"] { transition: none; }
 .chart-title { font-size: 13px; font-weight: 550; color: var(--vib-label-2); margin-bottom: 8px; }
 .chart-box { position: relative; height: 190px; }
 .chart-summary {
