@@ -28,9 +28,15 @@ node scripts/verify-rules.mjs
 ```
 AIRKOREA_SERVICE_KEY=공공데이터포털 일반 인증키(디코딩)
 GEMINI_API_KEY=Google AI Studio 키
+
+# 선택 — 마지막 정상값 공유 캐시 (Vercel KV / Upstash Redis)
+KV_REST_API_URL=
+KV_REST_API_TOKEN=
 ```
 
 > `GEMINI_API_KEY`가 없어도 앱은 정상 동작한다. 조언이 정적 문구로 나올 뿐이다.
+>
+> `KV_*`도 선택이다. 없으면 마지막 정상값을 인스턴스 메모리에만 둔다.
 
 ---
 
@@ -73,6 +79,20 @@ vercel
 배포 후 **대시보드 → Settings → Environment Variables**에 `AIRKOREA_SERVICE_KEY`, `GEMINI_API_KEY`를 등록한다.
 
 > 로컬은 되는데 배포만 안 된다면 거의 100% 이 단계를 빠뜨린 것이다 (PRD §6.4).
+
+### 마지막 정상값 공유 캐시 — 권장
+
+상류의 일일 요청 한도는 **오퍼레이션별**로 걸리고 자정(KST)까지 풀리지 않는다.
+한도를 소진하면 그 뒤로는 마지막 정상값이 유일한 데이터 공급원이다.
+
+인스턴스 메모리만으로는 부족하다. 서버리스는 요청마다 인스턴스가 갈리고 콜드 스타트도 잦아
+캐시가 대체로 비어 있다 — 로컬에서는 잘 되던 폴백이 배포에서만 안 먹는 이유가 이것이다.
+
+Vercel 마켓플레이스에서 Redis(Upstash 등)를 붙이면 `KV_REST_API_URL`·`KV_REST_API_TOKEN`이
+자동 주입되고 그대로 동작한다. `UPSTASH_REDIS_REST_URL`·`UPSTASH_REDIS_REST_TOKEN`도 인식한다.
+의존성은 추가하지 않는다 — REST라 `fetch`로 충분하다.
+
+설정하지 않아도 앱은 정상 동작한다. 폴백 범위가 좁아질 뿐이다.
 
 ---
 

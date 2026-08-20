@@ -36,11 +36,11 @@ export default async function handler(req, res) {
     if (!items.length) throw new ApiError('EMPTY', '측정소 응답이 비어 있습니다.');
 
     const payload = globalThis.AirTransform.air(items, sido);
-    rememberGood(cacheKey, payload);
+    await rememberGood(cacheKey, payload);
     return sendJson(res, payload, CACHE_REALTIME);
   } catch (err) {
     // R11 — 시연 중 장애 대비. 마지막 정상 응답이 있으면 stale 표시와 함께 내려준다
-    const fallback = recallGood(cacheKey);
+    const fallback = await recallGood(cacheKey);
     if (fallback) return sendJson(res, fallback, 'no-store');
     return sendError(res, err);
   }

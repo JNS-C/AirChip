@@ -144,6 +144,9 @@ server.listen(PORT, () => {
   console.log(`\n  오늘의 대기질 — http://localhost:${PORT}\n`);
   console.log(`  AIRKOREA_SERVICE_KEY  ${key ? '설정됨 (' + key.length + '자)' : '없음 → .env.local을 채우세요'}`);
   console.log(`  GEMINI_API_KEY        ${gem ? '설정됨' : '없음 → 조언은 정적 폴백으로 동작합니다'}`);
+  const kv = (process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL) &&
+             (process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN);
+  console.log(`  공유 캐시(KV)          ${kv ? '설정됨' : '없음 → 마지막 정상값을 메모리에만 둡니다'}`);
   console.log('\n  assets/transform.js·grade.js를 고쳤다면 이 서버를 재시작하세요.');
   console.log('  api/*.js는 매 요청 새로 읽지만 그것이 import하는 공용 자산은 캐시됩니다.\n');
 });

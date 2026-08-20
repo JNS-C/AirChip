@@ -31,10 +31,10 @@ export default async function handler(req, res) {
     if (!items.length) throw new ApiError('EMPTY', '해당 측정소의 시간별 값이 없습니다.');
 
     const payload = globalThis.AirTransform.station(items, station);
-    rememberGood(cacheKey, payload);
+    await rememberGood(cacheKey, payload);
     return sendJson(res, payload, CACHE_REALTIME);
   } catch (err) {
-    const fallback = recallGood(cacheKey);
+    const fallback = await recallGood(cacheKey);
     if (fallback) return sendJson(res, fallback, 'no-store');
     return sendError(res, err);
   }
